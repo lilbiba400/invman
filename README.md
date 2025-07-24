@@ -41,3 +41,6 @@ To build from source, clone the repo and go into the **invman/** directory. from
         pkg .
 
 The finished executable can be found in **invman/dist/**
+To Build for different targets(e.g. Linux or MacOS) you can add the desired targets to **package.json>pkg>targets**
+
+Note:*The installer was built using [Inno Setup](https://jrsoftware.org/isinfo.php)*
