@@ -1,0 +1,8 @@
+.github/
+node_modules/
+accounts/
+dist/
+.github/
+invman.exe
+Output/
+make_install.iss

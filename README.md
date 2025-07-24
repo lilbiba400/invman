@@ -1,0 +1,31 @@
+# INVMAN
+Simple CLI-Based inventory manager for CS2 using [node-globaloffensive](https://github.com/DoctorMcKay/node-globaloffensive) and [node-steamuser](https://github.com/DoctorMcKay/node-steam-user)
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/L4L41II3YS)
+
+## Install
+Download and install the invman_setup.exe from the releases tab. 
+
+Invman can also be used without installation. To do so, clone the repo, go into the invman/ directory. From there you can start INVMAN using: 
+
+    node main.js
+    
+## Usage
+After installation, start **INVMAN** and proceed with one of the supported login methods (*either QR-Login using the Steam Mobile App or credentials*)
+
+
+## Features
+
+- List items in Inventory and Storageunits
+- Move items in and out of Storageunits (add/remove commands)
+- Search for items (find command)
+- Create Steam-Multisell links for generic items (sell command)
+- Save credentials for multiple accounts
+- Context sensitive autocompletion (start typing and press tab)
+- Use the **help** command to get a list of available commands
+- Parsing Containers, Agents and most regular Skins. Patches, Stickers and Graffitis are not yet supported.
+
+### Roadmap
+- Price fetching and inventory evaluation
+- Trade items between saved accounts
+- Parsing Stickers, Patches and Graffitis
