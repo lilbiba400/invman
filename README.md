@@ -11,7 +11,9 @@ Download and install the invman_setup.exe from the releases tab.
 Invman can also be used without installation. To do so, clone the repo, go into the invman/ directory. From there you can start INVMAN using: 
 
     node main.js
-    
+
+**Attention!**: This will create a accounts/ folder at the current location which will contain the savefiles for your accounts!
+
 ## Usage
 After installation, start **INVMAN** and proceed with one of the supported login methods (*either QR-Login using the Steam Mobile App or credentials*)
 
@@ -32,4 +34,10 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Trade items between saved accounts
 - Parsing Stickers, Patches and Graffitis
 
+## Build
+To build from source, clone the repo and go into the **invman/** directory. from there run:
 
+        npm install
+        pkg .
+
+The finished executable can be found in **invman/dist/**
