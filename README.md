@@ -2,7 +2,7 @@
 Simple CLI-Based inventory manager for CS2 using [node-globaloffensive](https://github.com/DoctorMcKay/node-globaloffensive) and [node-steamuser](https://github.com/DoctorMcKay/node-steam-user)
 
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/L4L41II3YS)
-##### or 
+or
 [send me some of the junk from the depths of your Storageunits](https://lilbiba400.github.io/invman-donations):
 
 ## Install
@@ -31,3 +31,5 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Price fetching and inventory evaluation
 - Trade items between saved accounts
 - Parsing Stickers, Patches and Graffitis
+
+
