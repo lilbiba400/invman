@@ -28,7 +28,7 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Context sensitive autocompletion (start typing and press tab)
 - Use the **help** command to get a list of available commands
 - Parsing Containers, Agents and most regular Skins. (*Patches, Stickers and Graffitis are not yet supported.*)
-- Detailed information about skins, like full float, paint seed, etc. (inspect command) *\*not in realease yet*
+- Detailed information about skins, like full float, paint seed, etc. (inspect command)
 
 ### Roadmap
 - Price fetching and inventory evaluation
