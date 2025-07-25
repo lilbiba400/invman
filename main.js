@@ -1160,12 +1160,13 @@ function main() { //main function
     }
     console.clear()
     genAutocomplete();
-
+    /*
     fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
     fs.writeFileSync("invSug.json", JSON.stringify(inventorySug,null,2), 'utf8');
     fs.writeFileSync("inventory.json", JSON.stringify(inventory,null,2), 'utf8');
     fs.writeFileSync("itemDb.json", JSON.stringify(itemDb,null,2), 'utf8');
-}
+    */
+    }
 
 if(!fs.existsSync(REFRESH_TOKEN_PATH)){//check if accounts/ directory exists, if not, create it
     fs.mkdirSync(REFRESH_TOKEN_PATH)
