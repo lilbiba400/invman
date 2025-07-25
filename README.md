@@ -27,8 +27,8 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Save credentials for multiple accounts
 - Context sensitive autocompletion (start typing and press tab)
 - Use the **help** command to get a list of available commands
-- Parsing Containers, Agents and most regular Skins. Patches, Stickers and Graffitis are not yet supported.
-- Detailed information about skins, like full float, paint seed, etc. (inspect command)*\*not in realease yet*
+- Parsing Containers, Agents and most regular Skins. (*Patches, Stickers and Graffitis are not yet supported.*)
+- Detailed information about skins, like full float, paint seed, etc. (inspect command) *\*not in realease yet*
 
 ### Roadmap
 - Price fetching and inventory evaluation
@@ -36,12 +36,12 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Parsing Stickers, Patches and Graffitis
 
 ## Build
-To build from source, clone the repo and go into the **invman/** directory. from there run:
+To build from source, clone the repo and go into the **invman/** directory. From there run:
 
         npm install
         pkg .
 
-The finished executable can be found in **invman/dist/**
+The finished executable can be found in **invman/dist/**.
 To Build for different targets(e.g. Linux or MacOS) you can add the desired targets to **package.json>pkg>targets**
 
 Note: *The installer was built using [Inno Setup](https://jrsoftware.org/isinfo.php)*
