@@ -34,6 +34,7 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Price fetching and inventory evaluation
 - Trade items between saved accounts
 - Parsing Stickers, Patches and Graffitis
+- Coloring items by their rarity
 
 ## Build
 To build from source, clone the repo and go into the **invman/** directory. From there run:
