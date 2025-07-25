@@ -5,7 +5,8 @@ const cliProgress = require('cli-progress')
 const readline = require('readline');
 const {LoginSession,EAuthTokenPlatformType} = require('steam-session');
 const qrcode = require('qrcode-terminal');
-const axios = require('axios')
+const axios = require('axios');
+const { common } = require('protobufjs');
 
 //set working dir to script dir
 //process.chdir(__dirname)
@@ -24,6 +25,7 @@ let casketsLoaded=0 //sets the amount of loaded caskets to 0
 // Autocomplete, aggregated when inventory is loaded and genAutocomplete() is called
 let casketSug={}
 let inventorySug=[]
+let commonSug=[]
 const commands={
     add:"add",
     remove:"remove",
@@ -353,12 +355,7 @@ function initReadline() {
             }
             if(command===commands.find && words.length==2){
                 const arg = lastWord
-                const suggestionList = inventorySug
-                Object.values(casketSug).forEach(arr => {
-                    if (Array.isArray(arr)) {
-                        suggestionList.push(...arr);
-                    }
-                });
+                const suggestionList = commonSug
                 const hits = suggestionList.filter(s=>s.startsWith(`${arg}`))
                 return [hits.length ? hits : suggestionList, lastWord]
             }
@@ -477,26 +474,48 @@ function helpMsg(scope){
             donateCommand()
             break
     }
+    console.log("\n")
 }
 
 function genAutocomplete(){ //generate the autocomplete list
     casketSug={}
     inventorySug=[]
+    commonSug=[]
     for(let i=0;i<parsedInv.casket.length;i++){
         let casket=parsedInv.casket[i]
         let casketName = casket.itemName.replace(/ /g, "_"); // replace spaces with underscores
         casketSug[casketName]=[]
         for(let y = 0;y<casket.content.unique.length;y++){  //add unique items in caskets to autocomplete
-            casketSug[casketName].push(casket.content.unique[y].itemName.replace(/ /g, "_"))    
+            let name=casket.content.unique[y].itemName.replace(/ /g, "_")
+            casketSug[casketName].push(name)
+            let commonName=name.slice(0,-8)
+            if(!commonSug.includes(commonName)){
+                commonSug.push(commonName) 
+            }
         }
-        let items = Object.keys(casket.content.generic)
-        casketSug[casketName].push(...items.map(s => s.replace(/ /g, "_")))
+        let items = Object.keys(casket.content.generic).map(s => s.replace(/ /g, "_"))
+        casketSug[casketName].push(...items)
+        for(let i =0;i<items.length;i++){
+            if(!commonSug.includes(items[i])){
+                commonSug.push(items[i])
+            }
+        }
     }
     for(let x=0;x<parsedInv.unique.length;x++){ //add unique items in inventory to autocomplete
-        inventorySug.push(parsedInv.unique[x].itemName.replace(/ /g, "_"))
+        let name=parsedInv.unique[x].itemName.replace(/ /g, "_")
+        inventorySug.push(name)
+        let commonName=name.slice(0,-8)
+        if(!commonSug.includes(commonName)){
+            commonSug.push(commonName)
+        }
     }
-    let items=Object.keys(parsedInv.generic) // add generic items in inventory to autocomplete
-    inventorySug.push(...items.map(s => s.replace(/ /g, "_")))
+    let items=Object.keys(parsedInv.generic).map(s => s.replace(/ /g, "_")) // add generic items in inventory to autocomplete
+    inventorySug.push(...items)
+    for(let i =0;i<items.length;i++){
+        if(!commonSug.includes(items[i])){
+            commonSug.push(items[i])
+        }
+    }
     //fs.writeFileSync('casketSug.json', JSON.stringify(casketSug, null, 2)); //export casket suggestions to see if generation worked (debug)
     initReadline();
 }
@@ -567,12 +586,14 @@ function identItem(item){ //identify the item for a given item object, return ty
     let itemFloat=null
     let itemSt=null
     let itemCasket = null
+    let commonName=null
 
-    if(item.flags==0){ //flags=0, Item is a regular item
+    if(item.flags==0 || item.flags==4){ //flags=0, Item is a regular item
 
         if(item.hasOwnProperty('paint_index')){ //item is a regular skin
-            itemName = itemDb.find(obj => obj.paint_index == item.paint_index && obj.weapon.weapon_id==item.def_index).name //retrieve Item name from itemDb
-            itemName = itemName.replace(/\s*\(.*?\)\s*/g, '').trim()    //remove condition from itemName
+            commonName = itemDb.find(obj => obj.paint_index == item.paint_index && obj.weapon.weapon_id==item.def_index).name //retrieve Item name from itemDb
+            commonName = commonName.replace(/\s*\(.*?\)\s*/g, '').trim()    //remove condition from itemName
+            itemName = commonName + ` (${Number.parseFloat(item.paint_wear).toFixed(3)})`
             itemType = 0    // assign itemType 0 for regular skin
             itemFloat = item.paint_wear   
             itemSt = item.hasOwnProperty('kill_eater_value') // set itemSt to True if item has stattrak attribute
@@ -603,7 +624,7 @@ function identItem(item){ //identify the item for a given item object, return ty
     }else{ // return "Not a regular item"
         return {itemType:10,itemName:"Not a regular item.",itemFloat:itemFloat,itemId:item.id,itemSt:itemSt,itemCasket:itemCasket}
     }
-    return {itemType:itemType,itemName:itemName,itemFloat:itemFloat,itemId:item.id,itemSt:itemSt,itemCasket:itemCasket}
+    return {itemType:itemType,itemName:itemName,itemFloat:itemFloat,itemId:item.id,itemSt:itemSt,itemCasket:itemCasket, commonName:commonName}
 }
 
 function floatParser(float,short=true){ //converts item float value to condition name
@@ -805,7 +826,7 @@ function lsCommand(scope="inv"){
         });
         let uniques=[]
         for(let i=0;i<parsedInv.unique.length;i++){
-            let itemStr=`${parsedInv.unique[i].itemName} (${floatParser(parsedInv.unique[i].itemFloat)})`
+            let itemStr=`${parsedInv.unique[i].itemName}`
             uniques.push(itemStr)
         }
         total+=uniques.length
@@ -1000,11 +1021,12 @@ function findCommand(itemName){
     let caskets=parsedInv.casket
     //Search unique items
     for(let i=0;i<unique.length;i++){
-        if(unique[i].itemName==itemName){
+        let item =unique[i]
+        if(item.commonName==itemName){
             if(found.hasOwnProperty("Inventory")){
-                found["Inventory"].quantity+=1
+                found["Inventory"].push({"itemName":item.itemName,"commonName":itemName})
             }else{
-                found["Inventory"]={"itemName":itemName,"quantity":1}
+                found["Inventory"]=[{"itemName":item.itemName,"commonName":itemName}]
             }
         }
     }
@@ -1019,11 +1041,11 @@ function findCommand(itemName){
         let casket=caskets[i]
         for(let i=0;i<casket.content.unique.length;i++){
             let item=casket.content.unique[i]
-            if(item.itemName==itemName){
+            if(item.commonName==itemName){
                 if(found.hasOwnProperty(casket.itemName)){
-                    found[casket.itemName].quantity+=1
-                }else {
-                    found[casket.itemName]={"itemName":itemName,"quantity":1}
+                    found[casket.itemName].push({"itemName":item.itemName,"commonName":itemName})
+                }else{
+                    found[casket.itemName]=[{"itemName":item.itemName,"commonName":itemName}]
                 }
             }
         }for(let i=0;i<Object.keys(casket.content.generic).length;i++){
@@ -1033,7 +1055,19 @@ function findCommand(itemName){
         }
     }
     for(let i=0;i<Object.keys(found).length;i++){
-        console.log(`${Object.keys(found)[i]}:\n     ⮱ ${found[Object.keys(found)[i]].itemName} (${found[Object.keys(found)[i]].quantity}x)\n`)
+        let location=Object.keys(found)[i]
+        let outStr=`${location}:\n     ⮱ `
+        if(Array.isArray(found[location])){
+            for(let y=0;y<found[location].length;y++){
+                let item=found[location][y].itemName
+                outStr+=`${item}\n`
+            }
+            
+        }else{
+            outStr+=`${found[location].itemName} (${found[location].quantity}x)\n`
+        }
+        console.log(outStr)
+               
     }
 }
 
@@ -1074,13 +1108,12 @@ function main() { //main function
         saveRefreshToken(REFRESH_TOKEN,user.accountInfo.name,user.steamID)
     }
     console.clear()
-    helpMsg()
-    //fetchPrices()
-    console.log("\n")
     genAutocomplete();
 
-    //fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
-    
+    fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
+    fs.writeFileSync("invSug.json", JSON.stringify(inventorySug,null,2), 'utf8');
+    fs.writeFileSync("inventory.json", JSON.stringify(inventory,null,2), 'utf8');
+    fs.writeFileSync("itemDb.json", JSON.stringify(itemDb,null,2), 'utf8');
 }
 
 if(!fs.existsSync(REFRESH_TOKEN_PATH)){//check if accounts/ directory exists, if not, create it
