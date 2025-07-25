@@ -36,7 +36,8 @@ const commands={
     account:"account",
     sell:"sell",
     donate:"donate",
-    exit:"exit"
+    exit:"exit",
+    inspect:"inspect"
 }
 
 //Data sources
@@ -365,6 +366,13 @@ function initReadline() {
                 const hits = suggestionList.filter(s=>s.startsWith(`${arg}`))
                 return [hits.length ? hits : suggestionList, lastWord]
             }
+            if(command===commands.inspect && words.length==2){
+                const arg = lastWord
+                let suggestionList = [...inventorySug]
+                suggestionList.push(...Object.values(casketSug).flat())
+                const hits = suggestionList.filter(s=>s.startsWith(`${arg}`))
+                return [hits.length ? hits : suggestionList, lastWord]
+            }
             // Default: no matches
             return [[], lastWord];
         }
@@ -436,6 +444,9 @@ function initReadline() {
             case commands.exit:
                 console.log("Closing INVMAN...")
                 process.exit(0)
+            case commands.inspect:
+                inspectCommand(input_array[1])
+                break
             default:
                 helpMsg("unknown")
         }
@@ -581,12 +592,7 @@ function parseInv(){    //parse the inventory into readable format
 
 function identItem(item){ //identify the item for a given item object, return type (0=regular skin, 1=crate, 2=sticker, 3=patches, 4=storageunit, 5=misc/non-econ)
     
-    let itemType=null
-    let itemName=null
-    let itemFloat=null
-    let itemSt=null
-    let itemCasket = null
-    let commonName=null
+    let itemType, itemName, itemFloat,itemSt, itemCasket, commonName, stKills, paintSeed = null
 
     if(item.flags==0 || item.flags==4){ //flags=0, Item is a regular item
 
@@ -597,6 +603,8 @@ function identItem(item){ //identify the item for a given item object, return ty
             itemType = 0    // assign itemType 0 for regular skin
             itemFloat = item.paint_wear   
             itemSt = item.hasOwnProperty('kill_eater_value') // set itemSt to True if item has stattrak attribute
+            stKills=item.kill_eater_value
+            paintSeed=item.paint_seed
         }else if(items_game[item.def_index].prefab=="weapon_case" || items_game[item.def_index].prefab=="sticker_capsule"){ //item is a weapon case
             itemName = itemDb.find(obj => obj.id == "crate-"+item.def_index).name //retrieve name for crate
             itemType = 1 //assgin itemType 1 for crate
@@ -624,7 +632,17 @@ function identItem(item){ //identify the item for a given item object, return ty
     }else{ // return "Not a regular item"
         return {itemType:10,itemName:"Not a regular item.",itemFloat:itemFloat,itemId:item.id,itemSt:itemSt,itemCasket:itemCasket}
     }
-    return {itemType:itemType,itemName:itemName,itemFloat:itemFloat,itemId:item.id,itemSt:itemSt,itemCasket:itemCasket, commonName:commonName}
+    return {
+        itemType:itemType,
+        itemName:itemName,
+        itemFloat:itemFloat,
+        itemId:item.id,
+        itemSt:itemSt,
+        itemCasket:itemCasket,
+        commonName:commonName,
+        stKills:stKills,
+        paintSeed:paintSeed
+    }
 }
 
 function floatParser(float,short=true){ //converts item float value to condition name
@@ -1003,9 +1021,9 @@ function makeHashName(item){
     let hashName
     if(item.itemType==0){
         if(item.itemSt){
-            hashName=`StatTrak™ ${item.itemName} (${floatParser(item.itemFloat,false)})`
+            hashName=`StatTrak™ ${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
         }else{
-            hashName=`${item.itemName} (${floatParser(item.itemFloat,false)})`
+            hashName=`${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
         }
     }else{
         hashName=`${item.itemName}`
@@ -1083,6 +1101,39 @@ function sellCommand(itemNames){
     }
     let hyperlink=`\u001b]8;;${url}\u0007${"Steam Multisell Page"}\u001b]8;;\u0007`
     console.log(`Go to ${hyperlink}`)
+}
+
+function inspectCommand(itemName){
+    //find item-object by its name
+    let item=parsedInv.unique.find(item=>item.itemName===itemName)
+    if(!item){
+        for(let i=0;i<parsedInv.casket.length;i++){
+            let casket=parsedInv.casket[i]
+            item = casket.content.unique.find(item=>item.itemName===itemName)
+            if(item) break
+        }
+    }
+    if(!item){
+        console.error("The item is not inspectable, it is either generic or doesn't exist in Inventory.")
+        return
+    }
+
+    if(item.itemSt){
+        console.log(`${item.itemName}:\n
+        Hash Name: ${makeHashName(item)}
+            Float: ${item.itemFloat}
+       Float Name: ${floatParser(item.itemFloat)}
+       Paint Seed: ${item.paintSeed}
+   StatTrak Kills: ${item.stKills}
+            `)
+    }else{
+        console.log(`${item.itemName}:\n
+        Hash Name: ${makeHashName(item)}
+            Float: ${item.itemFloat}
+       Float Name: ${floatParser(item.itemFloat,false)}
+       Paint Seed: ${item.paintSeed}
+            `)
+    }
 }
 
 function donateCommand(){
