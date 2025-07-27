@@ -752,7 +752,7 @@ function moveTo(itemIds, target) {  //moves items to a storage unit, takes an ar
     let completed = 0;
     let inFlight = 0;
     let queue = [...itemIds];
-    const MAX_CONCURRENT = 3;
+    const MAX_CONCURRENT = 2;
 
     let inputActive;
     if(rl){
@@ -801,7 +801,7 @@ function moveFrom(itemIds, source) {//moves items from a casket to the inventory
     let completed = 0;
     let inFlight = 0;
     let queue = [...itemIds];
-    const MAX_CONCURRENT = 3;
+    const MAX_CONCURRENT = 2;
 
     bar.start(itemIds.length, 0);
 
