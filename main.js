@@ -592,7 +592,7 @@ function parseInv(){    //parse the inventory into readable format
 
 function identItem(item){ //identify the item for a given item object, return type (0=regular skin, 1=crate, 2=sticker, 3=patches, 4=storageunit, 5=misc/non-econ)
     
-    let itemType, itemName, itemFloat,itemSt, itemCasket, commonName, stKills, paintSeed = null
+    let itemType, itemName, itemFloat,itemSt, itemCasket, commonName, stKills, paintSeed, itemRarity = null
 
     if(item.flags==0 || item.flags==4){ //flags=0, Item is a regular item
 
@@ -605,6 +605,7 @@ function identItem(item){ //identify the item for a given item object, return ty
             itemSt = item.hasOwnProperty('kill_eater_value') // set itemSt to True if item has stattrak attribute
             stKills=item.kill_eater_value
             paintSeed=item.paint_seed
+            itemRarity=item.rarity
         }else if(items_game[item.def_index].prefab=="weapon_case" || items_game[item.def_index].prefab=="sticker_capsule"){ //item is a weapon case
             itemName = itemDb.find(obj => obj.id == "crate-"+item.def_index).name //retrieve name for crate
             itemType = 1 //assgin itemType 1 for crate
@@ -641,7 +642,8 @@ function identItem(item){ //identify the item for a given item object, return ty
         itemCasket:itemCasket,
         commonName:commonName,
         stKills:stKills,
-        paintSeed:paintSeed
+        paintSeed:paintSeed,
+        itemRarity:itemRarity
     }
 }
 
@@ -656,6 +658,28 @@ function floatParser(float,short=true){ //converts item float value to condition
         return short?"WW":"Well-Worn"
     }else if(float>0.45 && float<=1.00){
         return short?"BS":"Battle-Scarred"
+    }
+}
+
+function rarityParser(rarity, color=false){
+
+    switch (rarity){
+        case 1:
+            return color? "\x1b[90m" : "Consumer Grade"
+        case 2: 
+            return color? "\x1b[0;38;2;3;172;252;49m" : "Industrial Grade"
+        case 3: 
+            return color? "\x1b[0;38;2;3;61;252;49m" : "Mil-Spec"
+        case 4: 
+            return color? "\x1b[0;38;2;132;3;252;49m" : "Restricted"
+        case 5:
+            return color? "\x1b[0;38;2;236;3;252;49m" : "Classified"
+        case 6:
+            return color? "\x1b[31m" : "Covert"
+        case 7:
+            return color? "\x1b[33m" : "Contraband"
+
+
     }
 }
 
@@ -844,8 +868,14 @@ function lsCommand(scope="inv"){
         });
         let uniques=[]
         for(let i=0;i<parsedInv.unique.length;i++){
-            let itemStr=`${parsedInv.unique[i].itemName}`
-            uniques.push(itemStr)
+            let item = parsedInv.unique[i]
+            let itemStr
+            if(item.itemType==0){
+                itemStr=`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m`
+            }else{
+                itemStr=`${item.itemName}`
+            }
+                uniques.push(itemStr)
         }
         total+=uniques.length
         printWrappedList("Storageunits:",caskets)
@@ -856,6 +886,7 @@ function lsCommand(scope="inv"){
         let generics=[]
         let total=0
         let casket=parsedInv.casket[caskets.indexOf(scope)]
+
         for(let i=0;i<Object.keys(casket.content.generic).length;i++){
             let itemStr=`${casket.content.generic[Object.keys(casket.content.generic)[i]].itemName} (${casket.content.generic[Object.keys(casket.content.generic)[i]].quantity})`
             generics.push(itemStr)
@@ -872,13 +903,21 @@ function lsCommand(scope="inv"){
         
         let uniques=[]
         for(let i=0;i<casket.content.unique.length;i++){
-            let itemStr=`${casket.content.unique[i].itemName} (${floatParser(casket.content.unique[i].itemFloat)})`
+            let item=casket.content.unique[i]
+            let itemStr
+            if(item.itemType==0){
+                itemStr=`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m`
+                
+            }else{
+                itemStr=`${item.itemName}`
+            }
             uniques.push(itemStr)
         }
         total+=uniques.length
         printWrappedList("Generic Items:",generics)
         printWrappedList("Unique Items:",uniques,true)
         console.log("Total:",total)
+
     }else if(scope=="all" || scope=="a"){
         let uniques=[]
         let genericsObj={}
@@ -893,7 +932,12 @@ function lsCommand(scope="inv"){
                 }
             }for(let x=0;x<casket.content.unique.length;x++){
                 let itemObj=casket.content.unique[x]
-                let itemStr=`${itemObj.itemName} (${floatParser(itemObj.itemFloat)})`
+                let itemStr
+                if(itemObj.itemType==0){
+                    itemStr=`${rarityParser(itemObj.itemRarity,true)}${itemObj.itemName}\x1b[0m`
+                }else{
+                    itemStr=`${item.itemName}`
+                }
                 uniques.push(itemStr)
             }
             
@@ -1042,9 +1086,9 @@ function findCommand(itemName){
         let item =unique[i]
         if(item.commonName==itemName){
             if(found.hasOwnProperty("Inventory")){
-                found["Inventory"].push({"itemName":item.itemName,"commonName":itemName})
+                found["Inventory"].push({"itemName":item.itemName,"commonName":itemName,"rarity":item.itemRarity})
             }else{
-                found["Inventory"]=[{"itemName":item.itemName,"commonName":itemName}]
+                found["Inventory"]=[{"itemName":item.itemName,"commonName":itemName,"rarity":item.itemRarity}]
             }
         }
     }
@@ -1061,9 +1105,9 @@ function findCommand(itemName){
             let item=casket.content.unique[i]
             if(item.commonName==itemName){
                 if(found.hasOwnProperty(casket.itemName)){
-                    found[casket.itemName].push({"itemName":item.itemName,"commonName":itemName})
+                    found[casket.itemName].push({"itemName":item.itemName,"commonName":itemName,"rarity":item.itemRarity})
                 }else{
-                    found[casket.itemName]=[{"itemName":item.itemName,"commonName":itemName}]
+                    found[casket.itemName]=[{"itemName":item.itemName,"commonName":itemName,"rarity":item.itemRarity}]
                 }
             }
         }for(let i=0;i<Object.keys(casket.content.generic).length;i++){
@@ -1075,13 +1119,18 @@ function findCommand(itemName){
     for(let i=0;i<Object.keys(found).length;i++){
         let location=Object.keys(found)[i]
         let outStr=`${location}:\n     ⮱ `
-        if(Array.isArray(found[location])){
+        if(Array.isArray(found[location])){ //item is unique
             for(let y=0;y<found[location].length;y++){
-                let item=found[location][y].itemName
-                outStr+=`${item}\n`
+                let item=found[location][y]
+                if(item.hasOwnProperty("rarity")){
+                    outStr+=`${rarityParser(item.rarity,true)}${item.itemName}\x1b[0m\n`
+                }else{
+                    outStr+=`${item.itemName}\n`
+                }
+                
             }
             
-        }else{
+        }else{ //item is generic
             outStr+=`${found[location].itemName} (${found[location].quantity}x)\n`
         }
         console.log(outStr)
@@ -1119,18 +1168,20 @@ function inspectCommand(itemName){
     }
 
     if(item.itemSt){
-        console.log(`${item.itemName}:\n
+        console.log(`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m:\n
         Hash Name: ${makeHashName(item)}
             Float: ${item.itemFloat}
        Float Name: ${floatParser(item.itemFloat)}
+           Rarity: ${rarityParser(item.itemRarity,true)}${rarityParser(item.itemRarity,false)}\x1b[0m
        Paint Seed: ${item.paintSeed}
    StatTrak Kills: ${item.stKills}
             `)
     }else{
-        console.log(`${item.itemName}:\n
+        console.log(`${rarityParser(item,true)}${item.itemName}\x1b[0m:\n
         Hash Name: ${makeHashName(item)}
             Float: ${item.itemFloat}
        Float Name: ${floatParser(item.itemFloat,false)}
+           Rarity: ${rarityParser(item,true)}${rarityParser(item,false)}\x1b[0m
        Paint Seed: ${item.paintSeed}
             `)
     }

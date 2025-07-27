@@ -29,12 +29,13 @@ After installation, start **INVMAN** and proceed with one of the supported login
 - Use the **help** command to get a list of available commands
 - Parsing Containers, Agents and most regular Skins. (*Patches, Stickers and Graffitis are not yet supported.*)
 - Detailed information about skins, like full float, paint seed, etc. (inspect command)
+- Coloring items by their rarity
 
 ### Roadmap
 - Price fetching and inventory evaluation
 - Trade items between saved accounts
 - Parsing Stickers, Patches and Graffitis
-- Coloring items by their rarity
+
 
 ## Build
 To build from source, clone the repo and go into the **invman/** directory. From there run:
