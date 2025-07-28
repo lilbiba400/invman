@@ -18,6 +18,10 @@ Invman can also be used without installation. To do so, clone the repo, go into 
 After installation, start **INVMAN** and proceed with one of the supported login methods (*either QR-Login using the Steam Mobile App or credentials*)
 
 
+![Preview](https://github.com/user-attachments/assets/7cd29424-75b1-482b-a739-3d6743ae5743)
+
+
+
 ## Features
 
 - List items in Inventory and Storageunits
