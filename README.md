@@ -19,10 +19,7 @@ After installation, start **INVMAN** and proceed with one of the supported login
 
 
 
-
-https://github.com/user-attachments/assets/4c9b468d-8596-4e37-8d12-8c5fd2236b5b
-
-
+https://github.com/user-attachments/assets/42049d95-0210-4305-bef6-b28c7fe4b4ca
 
 
 
