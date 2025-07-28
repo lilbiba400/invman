@@ -543,9 +543,18 @@ function parseInv(){    //parse the inventory into readable format
     inventory = csgo.inventory; //reload
     parsedInv={"unique":[],"generic":{},"casket":[]} //clear parsed inventory
 
-    console.log("Parsing Inventory...")
-    const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect)
-    bar.start(inventory.length, 0)
+    const multibar= new cliProgress.MultiBar({
+        clearOnComplete:true,
+        hideCursor:true,
+        format:' {bar} | {filename} | {value}/{total}'
+    }, cliProgress.Presets.rect)
+
+    const bar = multibar.create(parsedInv.casket.length,0)
+    bar.update(0,{filename:"Parsing Inventory"})
+
+
+    //const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect)
+    //bar.start(inventory.length, 0)
     
     
 
@@ -553,12 +562,14 @@ function parseInv(){    //parse the inventory into readable format
         let item = identItem(inventory[i])
 
         if(item.itemCasket){//if item is in a casket, skip it
-            bar.update(i + 1)
+            //bar.update(i + 1)
+            bar.increment()
             continue
         }
 
         if(item.itemType == 5 || item.itemType == 10){ // if item type is non-econ(5) or Not a regular item (10), skip it
-            bar.update(i + 1)
+            bar.increment()
+            //bar.update(i + 1)
             continue
         }
 
@@ -573,18 +584,22 @@ function parseInv(){    //parse the inventory into readable format
                     quantity:   1
                 }
             }
-            bar.update(i + 1)
+            bar.increment()
+            //bar.update(i + 1)
 
         }else if(item.itemType==4){
             parsedInv.casket.push(item) //if item is storageunit add to "casket" array
-            bar.update(i + 1)
+            bar.increment()
+            //bar.update(i + 1)
             
         }else{ //when item is unique, add them to the unique array
             parsedInv.unique.push(item) //add parsed item to parsedInv array
-            bar.update(i + 1); // Update the progress bar
+            bar.increment
+            //bar.update(i + 1); // Update the progress bar
         }
     }
-    bar.stop() //stop progress bar
+    multibar.stop()
+    //bar.stop() //stop progress bar
     if(inputActive){
         initReadline()
     }
@@ -686,9 +701,15 @@ function rarityParser(rarity, color=false){
 function loadCaskets(callback) { //loads caskets and parses them into the casket subobjects
     casketsLoaded = 0; // reset the counter each time
 
+    const multibar= new cliProgress.MultiBar({
+        clearOnComplete:true,
+        hideCursor:true,
+        format:' {bar} | {filename} | {value}/{total}'
+    }, cliProgress.Presets.rect)
+
     
 
-    const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect)
+    //const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect)
     
     if (parsedInv.casket.length === 0) {
         if (callback) callback();
@@ -700,9 +721,11 @@ function loadCaskets(callback) { //loads caskets and parses them into the casket
         rl.close()
         inputActive=true
     }
-
-    console.log("Loading Caskets...")
-    bar.start(parsedInv.casket.length, 0)
+    
+    const bar = multibar.create(parsedInv.casket.length,0)
+    bar.update(0,{filename:"Loading Storageunits"})
+    //bar.start(parsedInv.casket.length, 0)
+    
     for (let i = 0; i < parsedInv.casket.length; i++) {
         const casket = parsedInv.casket[i];
         // Always initialize content object, even if casket is empty
@@ -735,9 +758,14 @@ function loadCaskets(callback) { //loads caskets and parses them into the casket
                 }
             }
             casketsLoaded += 1;
-            bar.update(i+1)
+            
+            bar.increment()
+            //bar.update(i+1)
+            
+            
             if (casketsLoaded === parsedInv.casket.length) { //if all caskets are loaded, call the callback function
-                bar.stop()
+                //bar.stop()
+                multibar.stop()
 
                 if(inputActive){initReadline}
 
@@ -748,7 +776,7 @@ function loadCaskets(callback) { //loads caskets and parses them into the casket
 }
 
 function moveTo(itemIds, target) {  //moves items to a storage unit, takes an array of itemIds as input
-    const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect);
+    const bar = new cliProgress.SingleBar({hideCursor:true,clearOnComplete:true}, cliProgress.Presets.rect,);
     let completed = 0;
     let inFlight = 0;
     let queue = [...itemIds];
@@ -767,7 +795,11 @@ function moveTo(itemIds, target) {  //moves items to a storage unit, takes an ar
         while (inFlight < MAX_CONCURRENT && queue.length > 0) {
             const itemId = queue.shift();
             inFlight++;
-            csgo.addToCasket(target, itemId);
+            try {
+                csgo.addToCasket(target, itemId);
+            } catch (err) {
+                console.error('Error while adding items to Storageunit:', err);
+            }
         }
     }
 
@@ -797,7 +829,7 @@ function moveTo(itemIds, target) {  //moves items to a storage unit, takes an ar
 }
 
 function moveFrom(itemIds, source) {//moves items from a casket to the inventory, takes an array og itemIds as input
-    const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect);
+    const bar = new cliProgress.SingleBar({hideCursor:true,clearOnComplete:true}, cliProgress.Presets.rect);
     let completed = 0;
     let inFlight = 0;
     let queue = [...itemIds];
@@ -815,7 +847,11 @@ function moveFrom(itemIds, source) {//moves items from a casket to the inventory
         while (inFlight < MAX_CONCURRENT && queue.length > 0) {
             const itemId = queue.shift();
             inFlight++;
-            csgo.removeFromCasket(source, itemId);
+            try {
+                csgo.removeFromCasket(source, itemId);
+            } catch (err) {
+                console.error('Error while removing items from Storageunit:', err);
+            }
         }
     }
 
@@ -1007,7 +1043,6 @@ function moveItemToCasket(itemName, casketName, amount = 1){ //gets the array of
     const casket = parsedInv.casket.find(c=>c.itemName==casketName)
 
     const casketId=casket.itemId
-    console.log(casketId)
     let used = casket.content.unique.length             //calculate amount of items in casket
                                                         //
     for (let i=0;i<casket.content.generic.length;i++){  //
