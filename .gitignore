@@ -7,3 +7,7 @@ invman.exe
 Output/
 make_install.iss
 README.md
+inventory.json
+invSug.json
+itemDb.json
+parsedInv.json

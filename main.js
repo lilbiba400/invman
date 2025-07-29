@@ -606,7 +606,7 @@ function parseInv(){    //parse the inventory into readable format
 
 function identItem(item){ //identify the item for a given item object, return type (0=regular skin, 1=crate, 2=sticker, 3=patches, 4=storageunit, 5=misc/non-econ)
     
-    let itemType, itemName, itemFloat,itemSt, itemCasket, commonName, stKills, paintSeed, itemRarity = null
+    let itemType, itemName, itemFloat,itemSt, itemCasket, commonName, stKills, paintSeed, itemRarity,itemStickers = null
 
     if(item.flags==0 || item.flags==4){ //flags=0, Item is a regular item
 
@@ -620,11 +620,28 @@ function identItem(item){ //identify the item for a given item object, return ty
             stKills=item.kill_eater_value
             paintSeed=item.paint_seed
             itemRarity=item.rarity
+            if(item.hasOwnProperty("stickers")){
+                for(let i=0;i<item.stickers.length;i++){
+                    let sticker=item.stickers[i]
+                    let sticker_id=`sticker-${sticker.sticker_id}`
+                    let sticker_obj=itemDb.find(obj=>obj.id==sticker_id)
+
+                    if(!Array.isArray(itemStickers)){
+                        itemStickers=[sticker_obj]
+                    }else{
+                        itemStickers.push(sticker_obj)
+                    }
+                }
+            }
+
         }else if(items_game[item.def_index].prefab=="weapon_case" || items_game[item.def_index].prefab=="sticker_capsule"){ //item is a weapon case
             itemName = itemDb.find(obj => obj.id == "crate-"+item.def_index).name //retrieve name for crate
             itemType = 1 //assgin itemType 1 for crate
+
         }else if(item.def_index=="1209"){// item ist ein sticker
-            itemName="Generic Sticker" //to be implemented
+            let sticker_id=`sticker-${item.stickers[0].sticker_id}`
+            let sticker=itemDb.find(obj=>obj.id==sticker_id)
+            itemName=sticker.name
             itemType = 2 //assign itemType 2 for sticker
             
         }else if(item.def_index=="4609"){// item ist ein patch
@@ -657,7 +674,8 @@ function identItem(item){ //identify the item for a given item object, return ty
         commonName:commonName,
         stKills:stKills,
         paintSeed:paintSeed,
-        itemRarity:itemRarity
+        itemRarity:itemRarity,
+        itemStickers:itemStickers
     }
 }
 
@@ -1066,7 +1084,7 @@ function moveItemToCasket(itemName, casketName, amount = 1){ //gets the array of
 
 }
 
-function printWrappedList(label, items, contrast=false,maxLineLength = process.stdout.columns || 100) {
+function printWrappedList(label, items, contrast=false,maxLineLength = process.stdout.columns || 100,print=true) {
     // ANSI escape codes for colors
     const WHITE = '\x1b[37m';
     const GREY = '\x1b[90m'; // Bright black (light grey)
@@ -1091,8 +1109,10 @@ function printWrappedList(label, items, contrast=false,maxLineLength = process.s
             output += (i === 0 ? "" : ", ") + item;
             line += (i === 0 ? "" : ", ") + item;
         }
-    }
-    console.log(output);
+    }if(print){
+        console.log(output)
+    }return output
+    
 }
 
 function makeHashName(item){
@@ -1201,24 +1221,28 @@ function inspectCommand(itemName){
         return
     }
 
-    if(item.itemSt){
-        console.log(`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m:\n
+    let infoString=`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m:\n
         Hash Name: ${makeHashName(item)}
             Float: ${item.itemFloat}
        Float Name: ${floatParser(item.itemFloat)}
            Rarity: ${rarityParser(item.itemRarity,true)}${rarityParser(item.itemRarity,false)}\x1b[0m
-       Paint Seed: ${item.paintSeed}
-   StatTrak Kills: ${item.stKills}
-            `)
-    }else{
-        console.log(`${rarityParser(item,true)}${item.itemName}\x1b[0m:\n
-        Hash Name: ${makeHashName(item)}
-            Float: ${item.itemFloat}
-       Float Name: ${floatParser(item.itemFloat,false)}
-           Rarity: ${rarityParser(item,true)}${rarityParser(item,false)}\x1b[0m
-       Paint Seed: ${item.paintSeed}
-            `)
+       Paint Seed: ${item.paintSeed}\n`
+
+    if(item.itemSt){
+        infoString+=`   StatTrak Kills: ${item.stKills}\n`
     }
+    if(item.itemStickers){
+        let stickers=[]
+        for(let i=0;i<item.itemStickers.length;i++){
+            stickers.push(item.itemStickers[i].name)
+        }
+        
+        //infoString+=`         Stickers:${printWrappedList("",stickers,false,1,false)}`
+        infoString+=`         Stickers: ${stickers.join(", ")}\n`
+        
+    }
+    console.log(infoString)
+
 }
 
 function donateCommand(){
@@ -1245,12 +1269,12 @@ function main() { //main function
     }
     console.clear()
     genAutocomplete();
-    /*
+    
     fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
     fs.writeFileSync("invSug.json", JSON.stringify(inventorySug,null,2), 'utf8');
     fs.writeFileSync("inventory.json", JSON.stringify(inventory,null,2), 'utf8');
     fs.writeFileSync("itemDb.json", JSON.stringify(itemDb,null,2), 'utf8');
-    */
+    
     }
 
 if(!fs.existsSync(REFRESH_TOKEN_PATH)){//check if accounts/ directory exists, if not, create it
