@@ -483,7 +483,13 @@ function helpMsg(scope){
         case commands.donate:
             donateCommand()
             break
-    }
+        case commands.inspect:
+            printWrappedList("Used to show more detailed info about an item.\ninspect <item-name>",["item-name: Name of the item that you want to inspect.(only works for unique items)"],false,1)
+            break
+        case commands.sell:
+            printWrappedList("Used to create Steam-Multisell links for one or more generic items.\nsell <item-name1> <item-name2> <...>",["item-name: Name of the item you want to sell.(only works for generic items"],false,1)
+            break
+        }
     console.log("\n")
 }
 
@@ -1269,12 +1275,12 @@ function main() { //main function
     }
     console.clear()
     genAutocomplete();
-    
+    /*
     fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
     fs.writeFileSync("invSug.json", JSON.stringify(inventorySug,null,2), 'utf8');
     fs.writeFileSync("inventory.json", JSON.stringify(inventory,null,2), 'utf8');
     fs.writeFileSync("itemDb.json", JSON.stringify(itemDb,null,2), 'utf8');
-    
+    */
     }
 
 if(!fs.existsSync(REFRESH_TOKEN_PATH)){//check if accounts/ directory exists, if not, create it
@@ -1282,4 +1288,3 @@ if(!fs.existsSync(REFRESH_TOKEN_PATH)){//check if accounts/ directory exists, if
 }
 
 getSources().then(handleLogin())
-
