@@ -35,11 +35,12 @@ https://github.com/user-attachments/assets/42049d95-0210-4305-bef6-b28c7fe4b4ca
 - Parsing Containers, Agents and most regular Skins. (*Patches, Stickers and Graffitis are not yet supported.*)
 - Detailed information about skins, like full float, paint seed, etc. (inspect command)
 - Coloring items by their rarity
+- Parsing Stickers
 
 ### Roadmap
 - Price fetching and inventory evaluation
 - Trade items between saved accounts
-- Parsing Stickers, Patches and Graffitis
+- Parsing Patches and Graffitis
 
 
 ## Build
