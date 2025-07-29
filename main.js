@@ -6,7 +6,6 @@ const readline = require('readline');
 const {LoginSession,EAuthTokenPlatformType} = require('steam-session');
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
-const { common } = require('protobufjs');
 
 //set working dir to script dir
 //process.chdir(__dirname)
