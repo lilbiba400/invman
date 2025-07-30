@@ -19,6 +19,7 @@
     "buffer": "^5.7.1",
     "bytebuffer": "^5.0.1",
     "chalk": "^4.1.2",
+    "chartscii": "^3.2.0",
     "chownr": "^1.1.4",
     "cli-progress": "^3.12.0",
     "cliui": "^7.0.4",
@@ -158,7 +159,7 @@
     "targets": [
       "node18-win-x64"
     ],
-    "outputPath":"./dist/"
+    "outputPath": "./dist/"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

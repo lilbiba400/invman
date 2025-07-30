@@ -6,6 +6,7 @@ const readline = require('readline');
 const {LoginSession,EAuthTokenPlatformType} = require('steam-session');
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
+const Chartscii = require('chartscii')
 
 //set working dir to script dir
 //process.chdir(__dirname)
@@ -37,6 +38,7 @@ const commands={
     donate:"donate",
     exit:"exit",
     inspect:"inspect"
+    //eval:"eval"
 }
 
 //Data sources
@@ -446,6 +448,11 @@ function initReadline() {
             case commands.inspect:
                 inspectCommand(input_array[1])
                 break
+            /*
+            case commands.eval:
+                evalCommand()
+                break 
+            */
             default:
                 helpMsg("unknown")
         }
@@ -454,43 +461,6 @@ function initReadline() {
 
     rl.setPrompt('invman> ');
     rl.prompt();
-}
-
-function helpMsg(scope){
-    const help="Welcome to invman, the simple CLI inventory manager for CS2. Use 'help <command>' for more info. Supported commands are:"
-    switch (scope){
-        default:
-            printWrappedList(help,Object.values(commands),false)
-            break
-        case commands.add:
-            printWrappedList("Used to add items to a storageunit.\nadd <storageunit> <item> (amount)",["storageunit: Name of a storageunit.","item: Name of an item.","amount: (optional) The amount of items to be moved."],false,1)
-            break
-        case commands.remove:
-            printWrappedList("Used to remove items from a storageunit.\nremove <storageunit> <item> (amount)",["storageunit: Name of a storageunit.","item: Name of an item.","amount: (optional) The amount of items to be moved."],false,1)
-            break
-        case commands.ls:
-            printWrappedList("Used to list the contents of an inventory.\nls (storageunit)",["storageunit: (optional) the storage unit you want to list the contents of, can also be 'all'"])
-            break
-        case commands.clear:
-            console.log("Used to clear the Terminal.\nclear")
-            break
-        case commands.find:
-            printWrappedList("Used to find the location of an item in inventory.\nfind <item-name>",["item-name: Name of the item that you want to find."],false,1)
-            break
-        case commands.account:
-            console.log("Used to display information about the current account.\naccount")
-            break
-        case commands.donate:
-            donateCommand()
-            break
-        case commands.inspect:
-            printWrappedList("Used to show more detailed info about an item.\ninspect <item-name>",["item-name: Name of the item that you want to inspect.(only works for unique items)"],false,1)
-            break
-        case commands.sell:
-            printWrappedList("Used to create Steam-Multisell links for one or more generic items.\nsell <item-name1> <item-name2> <...>",["item-name: Name of the item you want to sell.(only works for generic items"],false,1)
-            break
-        }
-    console.log("\n")
 }
 
 function genAutocomplete(){ //generate the autocomplete list
@@ -903,6 +873,181 @@ function moveFrom(itemIds, source) {//moves items from a casket to the inventory
     startNext();
 }
 
+function printWrappedList(label, items, contrast=false,maxLineLength = process.stdout.columns || 100,print=true) {
+    // ANSI escape codes for colors
+    const WHITE = '\x1b[37m';
+    const GREY = '\x1b[90m'; // Bright black (light grey)
+    const RESET = '\x1b[0m';
+    let line = "     ⮱ ";
+    let output = label + "\n" + line;
+    for (let i = 0; i < items.length; i++) {
+        let item;
+        if (contrast) {
+            let color = (i % 2 === 0) ? WHITE : GREY;
+            item = color + items[i] + RESET;
+        } else {
+            item = items[i];
+        }
+        let next = (i === 0 ? "" : ", ") + item;
+        // For length, ignore color codes if present
+        let lineLength = (line + next).replace(/\x1b\[[0-9;]*m/g, '').length;
+        if (lineLength > maxLineLength) {
+            output += "\n       " + item;
+            line = "       " + item;
+        } else {
+            output += (i === 0 ? "" : ", ") + item;
+            line += (i === 0 ? "" : ", ") + item;
+        }
+    }if(print){
+        console.log(output)
+    }return output
+    
+}
+
+function makeHashName(item){
+    let hashName
+    if(item.itemType==0){
+        if(item.itemSt){
+            hashName=`StatTrak™ ${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
+        }else{
+            hashName=`${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
+        }
+    }else{
+        hashName=`${item.itemName}`
+    }
+        return hashName
+}
+
+async function getPrice(itemName){
+    let url=`https://csfloat.com/api/v1/listings?limit=1&type=buy_now&market_hash_name=${itemName}`
+    try{
+        const apiResponse= await axios.get(url)
+        let price=apiResponse.data["0"].price
+        return price
+    }catch(err){
+        console.error(`Error while fetching price for "${itemName}":`,err)
+        return 0
+    }
+}
+
+async function evalGenerics(){
+    for(let i=0;i<Object.keys(parsedInv.generic).length;i++){
+        let price=await getPrice(Object.keys(parsedInv.generic)[i])
+        parsedInv.generic[Object.keys(parsedInv.generic)[i]].value=price
+    }
+    for(let i=0;i<parsedInv.casket.length;i++){
+        let casket=parsedInv.casket[i]
+        for(let y=0;y<Object.keys(casket.content.generic).length;y++){
+            let price =await getPrice(Object.keys(casket.content.generic)[i])
+            casket.content.generic[Object.keys(casket.content.generic[i])].value=price
+        }
+    }
+}
+
+//Command-Functions
+
+function helpMsg(scope){
+    const help="Welcome to invman, the simple CLI inventory manager for CS2. Use 'help <command>' for more info. Supported commands are:"
+    switch (scope){
+        default:
+            printWrappedList(help,Object.values(commands),false)
+            break
+        case commands.add:
+            printWrappedList("Used to add items to a storageunit.\nadd <storageunit> <item> (amount)",["storageunit: Name of a storageunit.","item: Name of an item.","amount: (optional) The amount of items to be moved."],false,1)
+            break
+        case commands.remove:
+            printWrappedList("Used to remove items from a storageunit.\nremove <storageunit> <item> (amount)",["storageunit: Name of a storageunit.","item: Name of an item.","amount: (optional) The amount of items to be moved."],false,1)
+            break
+        case commands.ls:
+            printWrappedList("Used to list the contents of an inventory.\nls (storageunit)",["storageunit: (optional) the storage unit you want to list the contents of, can also be 'all'"])
+            break
+        case commands.clear:
+            console.log("Used to clear the Terminal.\nclear")
+            break
+        case commands.find:
+            printWrappedList("Used to find the location of an item in inventory.\nfind <item-name>",["item-name: Name of the item that you want to find."],false,1)
+            break
+        case commands.account:
+            console.log("Used to display information about the current account.\naccount")
+            break
+        case commands.donate:
+            donateCommand()
+            break
+        case commands.inspect:
+            printWrappedList("Used to show more detailed info about an item.\ninspect <item-name>",["item-name: Name of the item that you want to inspect.(only works for unique items)"],false,1)
+            break
+        case commands.sell:
+            printWrappedList("Used to create Steam-Multisell links for one or more generic items.\nsell <item-name1> <item-name2> <...>",["item-name: Name of the item you want to sell.(only works for generic items"],false,1)
+            break
+        }
+    console.log("\n")
+}
+
+function moveItemFromCasket(itemName, casketName, amount = 1) { //gets the array of itemIds to be moved and passes them to the moveFrom() function
+    // Find the casket by id
+    const casket = parsedInv.casket.find(c => c.itemName === casketName);
+    const casketId = casket.itemId
+    if (!casket || !casket.content) {
+        console.error('Casket not found or content not loaded');
+        return;
+    }
+    let used = parsedInv.unique.length                  //calculate amount of items in inventory
+                                                        //
+    for (let i=0;i<parsedInv.generic.length;i++){       //
+        used+=parsedInv.generic[i].quantity             //
+    }
+
+    if(1000-used<amount){//Not enough space in Inventory
+        console.error(`Inventory is too full: ${amount} needed, ${1000-used} available`)
+        return
+    }
+    // Check unique array
+    const uniqueItem = casket.content.unique.find(item => item.itemName === itemName);
+    if (uniqueItem) {
+        // Move the first matching unique item
+        moveFrom([uniqueItem.itemId], casketId);
+        return;
+    }
+    // Check generic object
+    const genericItem = casket.content.generic[itemName];
+    if (genericItem && genericItem.quantity >= amount) {
+        // Move the first 'amount' itemIds
+        moveFrom(genericItem.itemIds.slice(0, amount), casketId);
+        return;
+    }
+    // Not found or not enough quantity
+    console.error('Item not found in casket or insufficient quantity');
+}
+
+function moveItemToCasket(itemName, casketName, amount = 1){ //gets the array of itemIds to be moved and passes them to the moveTo() functionconsole.log(casketName)
+
+    const casket = parsedInv.casket.find(c=>c.itemName==casketName)
+
+    const casketId=casket.itemId
+    let used = casket.content.unique.length             //calculate amount of items in casket
+                                                        //
+    for (let i=0;i<casket.content.generic.length;i++){  //
+        used+=casket.content.generic[i].quantity                //
+    }
+    if(1000-used<amount){//Not enough space in Casket
+        console.error(`Storageunit is too full: ${amount} needed, ${1000-used} available`)
+        return
+    }
+
+    const uniqueItem=parsedInv.unique.find(item => item.itemName === itemName);
+    if(uniqueItem){ // If it is a unique Item move it, ignore amount
+        moveTo([uniqueItem.itemId],casketId)
+    }
+
+    const genericItem = parsedInv.generic[itemName];
+    if(genericItem && genericItem.quantity>=amount){ //if item is generic, check if sufficient quantity is available 
+        moveTo(genericItem.itemIds.slice(0,amount),casketId) //move the first x items from the itemIds array to the casket
+        return;
+    }
+    console.error("Item not found in inventory or insufficient amount")
+
+}
+
 function lsCommand(scope="inv"){
     let caskets=[]
     for(let i=0;i<parsedInv.casket.length;i++){
@@ -1023,116 +1168,6 @@ function lsCommand(scope="inv"){
         console.log("Total:",total)
     }
 
-}
-
-function moveItemFromCasket(itemName, casketName, amount = 1) { //gets the array of itemIds to be moved and passes them to the moveFrom() function
-    // Find the casket by id
-    const casket = parsedInv.casket.find(c => c.itemName === casketName);
-    const casketId = casket.itemId
-    if (!casket || !casket.content) {
-        console.error('Casket not found or content not loaded');
-        return;
-    }
-    let used = parsedInv.unique.length                  //calculate amount of items in inventory
-                                                        //
-    for (let i=0;i<parsedInv.generic.length;i++){       //
-        used+=parsedInv.generic[i].quantity             //
-    }
-
-    if(1000-used<amount){//Not enough space in Inventory
-        console.error(`Inventory is too full: ${amount} needed, ${1000-used} available`)
-        return
-    }
-    // Check unique array
-    const uniqueItem = casket.content.unique.find(item => item.itemName === itemName);
-    if (uniqueItem) {
-        // Move the first matching unique item
-        moveFrom([uniqueItem.itemId], casketId);
-        return;
-    }
-    // Check generic object
-    const genericItem = casket.content.generic[itemName];
-    if (genericItem && genericItem.quantity >= amount) {
-        // Move the first 'amount' itemIds
-        moveFrom(genericItem.itemIds.slice(0, amount), casketId);
-        return;
-    }
-    // Not found or not enough quantity
-    console.error('Item not found in casket or insufficient quantity');
-}
-
-function moveItemToCasket(itemName, casketName, amount = 1){ //gets the array of itemIds to be moved and passes them to the moveTo() functionconsole.log(casketName)
-
-    const casket = parsedInv.casket.find(c=>c.itemName==casketName)
-
-    const casketId=casket.itemId
-    let used = casket.content.unique.length             //calculate amount of items in casket
-                                                        //
-    for (let i=0;i<casket.content.generic.length;i++){  //
-        used+=casket.content.generic[i].quantity                //
-    }
-    if(1000-used<amount){//Not enough space in Casket
-        console.error(`Storageunit is too full: ${amount} needed, ${1000-used} available`)
-        return
-    }
-
-    const uniqueItem=parsedInv.unique.find(item => item.itemName === itemName);
-    if(uniqueItem){ // If it is a unique Item move it, ignore amount
-        moveTo([uniqueItem.itemId],casketId)
-    }
-
-    const genericItem = parsedInv.generic[itemName];
-    if(genericItem && genericItem.quantity>=amount){ //if item is generic, check if sufficient quantity is available 
-        moveTo(genericItem.itemIds.slice(0,amount),casketId) //move the first x items from the itemIds array to the casket
-        return;
-    }
-    console.error("Item not found in inventory or insufficient amount")
-
-}
-
-function printWrappedList(label, items, contrast=false,maxLineLength = process.stdout.columns || 100,print=true) {
-    // ANSI escape codes for colors
-    const WHITE = '\x1b[37m';
-    const GREY = '\x1b[90m'; // Bright black (light grey)
-    const RESET = '\x1b[0m';
-    let line = "     ⮱ ";
-    let output = label + "\n" + line;
-    for (let i = 0; i < items.length; i++) {
-        let item;
-        if (contrast) {
-            let color = (i % 2 === 0) ? WHITE : GREY;
-            item = color + items[i] + RESET;
-        } else {
-            item = items[i];
-        }
-        let next = (i === 0 ? "" : ", ") + item;
-        // For length, ignore color codes if present
-        let lineLength = (line + next).replace(/\x1b\[[0-9;]*m/g, '').length;
-        if (lineLength > maxLineLength) {
-            output += "\n       " + item;
-            line = "       " + item;
-        } else {
-            output += (i === 0 ? "" : ", ") + item;
-            line += (i === 0 ? "" : ", ") + item;
-        }
-    }if(print){
-        console.log(output)
-    }return output
-    
-}
-
-function makeHashName(item){
-    let hashName
-    if(item.itemType==0){
-        if(item.itemSt){
-            hashName=`StatTrak™ ${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
-        }else{
-            hashName=`${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
-        }
-    }else{
-        hashName=`${item.itemName}`
-    }
-        return hashName
 }
 
 function findCommand(itemName){
@@ -1269,12 +1304,48 @@ function donateCommand(){
     qrcode.generate(donationLink,{small:true})
 }
 
+function evalCommand(){
+    let priceSummary={}
+    for(let i=0;i<Object.keys(parsedInv.generic).length;i++){
+        let itemName=Object.keys(parsedInv.generic)[i]
+        priceSummary[itemName]={quantity:parsedInv.generic[itemName].quantity,value:parsedInv.generic[itemName].value}
+    }
+    for(let i=0;i<parsedInv.casket.length;i++){
+        let casket=parsedInv.casket[i]
+        for(let y=0;y<Object.keys(casket.content.generic).length;y++){
+            let itemName = Object.keys(casket.content.generic)[i]
+            if(priceSummary.hasOwnProperty(itemName)){
+                priceSummary[itemName].quantity+=casket.content.generic[itemName].quantity
+            }else{
+                priceSummary[itemName]={quantity:casket.content.generic[itemName].quantity,value:casket.content.generic[itemName].value}
+            }
+        }
+    }
+    for(let i=0;i<Object.keys(priceSummary).length;i++){
+        let itemName=Object.keys(priceSummary)[i]
+        priceSummary[itemName].total=priceSummary[itemName].quantity*priceSummary[itemName].value
+    }
+    let data=[]
+    const options={
+        sort:true,
+        color:"white",
+        orientation:"vertical"
+    }
+    for(let i=0;i<Object.keys(priceSummary).length;i++){
+        let item=priceSummary[Object.keys(priceSummary)[i]]
+        data.push({label:Object.keys(priceSummary)[i],value:item.total})
+    }
+    const chart = new Chartscii(data,options)
+    console.log(chart.create)
+}
+
 function main() { //main function
     if(REFRESH_TOKEN){// if new refreshtoken was received, update it
         saveRefreshToken(REFRESH_TOKEN,user.accountInfo.name,user.steamID)
     }
     console.clear()
     genAutocomplete();
+    //evalGenerics()
     /*
     fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
     fs.writeFileSync("invSug.json", JSON.stringify(inventorySug,null,2), 'utf8');
