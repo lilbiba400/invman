@@ -16,6 +16,7 @@ const csgo = new GlobalOffensive(user)
 let REFRESH_TOKEN;
 let rl = null;
 const REFRESH_TOKEN_PATH = 'accounts/';
+const DUMP_FILE_PATH= 'dumps/'
 
 //Inventory contents
 let inventory //aggregated once connected to GC
@@ -37,7 +38,8 @@ const commands={
     sell:"sell",
     donate:"donate",
     exit:"exit",
-    inspect:"inspect"
+    inspect:"inspect",
+    dump:"dump"
     //eval:"eval"
 }
 
@@ -448,6 +450,9 @@ function initReadline() {
             case commands.inspect:
                 inspectCommand(input_array[1])
                 break
+            case commands.dump:
+                dumpInv();
+                break
             /*
             case commands.eval:
                 evalCommand()
@@ -640,6 +645,18 @@ function identItem(item){ //identify the item for a given item object, return ty
     }else{ // return "Not a regular item"
         return {itemType:10,itemName:"Not a regular item.",itemFloat:itemFloat,itemId:item.id,itemSt:itemSt,itemCasket:itemCasket}
     }
+
+    let hashName
+    if(itemType==0){
+        if(itemSt){
+            hashName=`StatTrak™ ${itemName.slice(0,-8)} (${floatParser(itemFloat,false)})`
+        }else{
+            hashName=`${itemName.slice(0,-8)} (${floatParser(itemFloat,false)})`
+        }
+    }else{
+        hashName=`${itemName}`
+    }
+
     return {
         itemType:itemType,
         itemName:itemName,
@@ -651,7 +668,9 @@ function identItem(item){ //identify the item for a given item object, return ty
         stKills:stKills,
         paintSeed:paintSeed,
         itemRarity:itemRarity,
-        itemStickers:itemStickers
+        itemStickers:itemStickers,
+        marketHashName:hashName
+
     }
 }
 
@@ -904,20 +923,6 @@ function printWrappedList(label, items, contrast=false,maxLineLength = process.s
     
 }
 
-function makeHashName(item){
-    let hashName
-    if(item.itemType==0){
-        if(item.itemSt){
-            hashName=`StatTrak™ ${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
-        }else{
-            hashName=`${item.itemName.slice(0,-8)} (${floatParser(item.itemFloat,false)})`
-        }
-    }else{
-        hashName=`${item.itemName}`
-    }
-        return hashName
-}
-
 async function getPrice(itemName){
     let url=`https://csfloat.com/api/v1/listings?limit=1&type=buy_now&market_hash_name=${itemName}`
     try{
@@ -979,11 +984,15 @@ function helpMsg(scope){
         case commands.sell:
             printWrappedList("Used to create Steam-Multisell links for one or more generic items.\nsell <item-name1> <item-name2> <...>",["item-name: Name of the item you want to sell.(only works for generic items"],false,1)
             break
+        case commands.dump:
+            console.log("Used to dump the Users inventory parsed as JSON-Object to the dumps/ directory.\ndump")
+            break
         }
     console.log("\n")
 }
 
 function moveItemFromCasket(itemName, casketName, amount = 1) { //gets the array of itemIds to be moved and passes them to the moveFrom() function
+
     // Find the casket by id
     const casket = parsedInv.casket.find(c => c.itemName === casketName);
     const casketId = casket.itemId
@@ -1263,8 +1272,8 @@ function inspectCommand(itemName){
     }
 
     let infoString=`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m:\n
-        Hash Name: ${makeHashName(item)}
-            Float: ${item.itemFloat}
+        Hash Name: ${item.marketHashName}
+            Float: ${item.itemFloat}make
        Float Name: ${floatParser(item.itemFloat)}
            Rarity: ${rarityParser(item.itemRarity,true)}${rarityParser(item.itemRarity,false)}\x1b[0m
        Paint Seed: ${item.paintSeed}\n`
@@ -1302,6 +1311,13 @@ function donateCommand(){
     const hyperlink=`\u001b]8;;${donationLink}\u0007${"INVMAN donation page"}\u001b]8;;\u0007`
     console.log(`\n${donateJokes[Math.floor(Math.random() * donateJokes.length)]}\n\nTo get to the Donation-Page follow this link => ${hyperlink}\n\nOr scan this QR-Code:`)
     qrcode.generate(donationLink,{small:true})
+}
+
+function dumpInv(){
+
+    fs.writeFileSync(DUMP_FILE_PATH+"parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
+    fs.writeFileSync(DUMP_FILE_PATH+"inventory.json", JSON.stringify(inventory,null,2), 'utf8');
+    console.log(`Inventory Objects have been dumped to ${DUMP_FILE_PATH}`)
 }
 
 function evalCommand(){
@@ -1346,12 +1362,12 @@ function main() { //main function
     console.clear()
     genAutocomplete();
     //evalGenerics()
-    /*
+/*
     fs.writeFileSync("parsedInv.json", JSON.stringify(parsedInv,null,2), 'utf8');
     fs.writeFileSync("invSug.json", JSON.stringify(inventorySug,null,2), 'utf8');
     fs.writeFileSync("inventory.json", JSON.stringify(inventory,null,2), 'utf8');
     fs.writeFileSync("itemDb.json", JSON.stringify(itemDb,null,2), 'utf8');
-    */
+*/
     }
 
 if(!fs.existsSync(REFRESH_TOKEN_PATH)){//check if accounts/ directory exists, if not, create it
