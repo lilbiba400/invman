@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Simple CLI-Based inventory manager for CS2 using [node-globaloffensive](https://github.com/DoctorMcKay/node-globaloffensive) and [node-steamuser](https://github.com/DoctorMcKay/node-steam-user)",
   "main": "main.js",
+  "type": "module",
   "dependencies": {
     "adm-zip": "^0.5.16",
     "agent-base": "^6.0.2",

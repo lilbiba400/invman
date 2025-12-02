@@ -1,12 +1,12 @@
-const SteamUser = require('steam-user')
-const GlobalOffensive = require('globaloffensive')
-const fs =require('fs')
-const cliProgress = require('cli-progress')
-const readline = require('readline');
-const {LoginSession,EAuthTokenPlatformType} = require('steam-session');
-const qrcode = require('qrcode-terminal');
-const axios = require('axios');
-const Chartscii = require('chartscii')
+import SteamUser from 'steam-user';
+import GlobalOffensive from 'globaloffensive';
+import fs from 'fs';
+import cliProgress from 'cli-progress';
+import readline from 'readline';
+import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
+import qrcode from 'qrcode-terminal';
+import axios from 'axios';
+import Chartscii from 'chartscii';
 
 //set working dir to script dir
 //process.chdir(__dirname)
