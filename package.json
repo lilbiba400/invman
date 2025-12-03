@@ -9,6 +9,7 @@
     "chartscii": "3.2.0",
     "cli-progress": "3.12.0",
     "globaloffensive": "3.2.0",
+    "pkg": "5.8.1",
     "qrcode-terminal": "0.12.0",
     "readline": "1.3.0",
     "steam-session": "1.9.4",
