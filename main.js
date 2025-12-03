@@ -8,6 +8,13 @@ import qrcode from 'qrcode-terminal';
 import axios from 'axios';
 import Chartscii from 'chartscii';
 
+import {
+    floatParser,
+    parseVDF,
+    printWrappedList,
+    rarityParser
+} from './src/utils/index.js';
+
 //set working dir to script dir
 //process.chdir(__dirname)
 
@@ -126,51 +133,6 @@ async function getSources(){
         }
 
 }
-
-function parseVDF(text) {
-    const lines = text.split(/\r?\n/);
-    const stack = [];
-    let current = {};
-    let key = null;
-
-    for (let rawLine of lines) {
-      let line = rawLine.trim();
-      if (!line || line.startsWith('//')) continue;
-
-      if (line === '{') {
-        const obj = {};
-        if (key !== null) {
-          if (typeof current[key] === 'undefined') {
-            current[key] = obj;
-          } else if (Array.isArray(current[key])) {
-            current[key].push(obj);
-          } else {
-            current[key] = [current[key], obj];
-          }
-        }
-        stack.push([current, key]);
-        current = obj;
-        key = null;
-      } else if (line === '}') {
-        [current, key] = stack.pop();
-        key = null;
-      } else {
-        // Key-value pair
-        const match = line.match(/^"([^"]+)"\s+"([^"]*)"$/);
-        if (match) {
-          const [, k, v] = match;
-          current[k] = v;
-        } else {
-          // Key without value, expect a block
-          const keyMatch = line.match(/^"([^"]+)"$/);
-          if (keyMatch) {
-            key = keyMatch[1];
-          }
-        }
-      }
-    }
-    return current;
-  }
 
 function saveRefreshToken(token,userName,userId) {
 
@@ -668,42 +630,6 @@ function identItem(item){ //identify the item for a given item object, return ty
     }
 }
 
-function floatParser(float,short=true){ //converts item float value to condition name
-    if(float<0.07){
-        return short?"FN":"Factory New"
-    }else if(float>0.07 && float<=0.15){
-        return short?"MW":"Minimal Wear"
-    }else if(float>0.15 && float<=0.37){
-        return short?"FT": "Field-Tested"
-    }else if(float>0.37 && float<=0.45){
-        return short?"WW":"Well-Worn"
-    }else if(float>0.45 && float<=1.00){
-        return short?"BS":"Battle-Scarred"
-    }
-}
-
-function rarityParser(rarity, color=false){
-
-    switch (rarity){
-        case 1:
-            return color? "\x1b[90m" : "Consumer Grade"
-        case 2:
-            return color? "\x1b[0;38;2;3;172;252;49m" : "Industrial Grade"
-        case 3:
-            return color? "\x1b[0;38;2;3;61;252;49m" : "Mil-Spec"
-        case 4:
-            return color? "\x1b[0;38;2;132;3;252;49m" : "Restricted"
-        case 5:
-            return color? "\x1b[0;38;2;236;3;252;49m" : "Classified"
-        case 6:
-            return color? "\x1b[31m" : "Covert"
-        case 7:
-            return color? "\x1b[33m" : "Contraband"
-
-
-    }
-}
-
 function loadCaskets(callback) { //loads caskets and parses them into the casket subobjects
     casketsLoaded = 0; // reset the counter each time
 
@@ -884,37 +810,6 @@ function moveFrom(itemIds, source) {//moves items from a casket to the inventory
     csgo.on('itemCustomizationNotification', onNotification);
 
     startNext();
-}
-
-function printWrappedList(label, items, contrast=false,maxLineLength = process.stdout.columns || 100,print=true) {
-    // ANSI escape codes for colors
-    const WHITE = '\x1b[37m';
-    const GREY = '\x1b[90m'; // Bright black (light grey)
-    const RESET = '\x1b[0m';
-    let line = "     ⮱ ";
-    let output = label + "\n" + line;
-    for (let i = 0; i < items.length; i++) {
-        let item;
-        if (contrast) {
-            let color = (i % 2 === 0) ? WHITE : GREY;
-            item = color + items[i] + RESET;
-        } else {
-            item = items[i];
-        }
-        let next = (i === 0 ? "" : ", ") + item;
-        // For length, ignore color codes if present
-        let lineLength = (line + next).replace(/\x1b\[[0-9;]*m/g, '').length;
-        if (lineLength > maxLineLength) {
-            output += "\n       " + item;
-            line = "       " + item;
-        } else {
-            output += (i === 0 ? "" : ", ") + item;
-            line += (i === 0 ? "" : ", ") + item;
-        }
-    }if(print){
-        console.log(output)
-    }return output
-
 }
 
 async function getPrice(itemName){
