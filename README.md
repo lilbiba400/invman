@@ -6,9 +6,9 @@ or
 [send me some of the junk from the depths of your Storageunits](https://lilbiba400.github.io/invman-donations):
 
 ## Install
-Download and install the invman_setup.exe from the releases tab. 
+Download and install the invman_setup.exe from the releases tab.
 
-Invman can also be used without installation. To do so, clone the repo, go into the invman/ directory. From there you can start INVMAN using: 
+Invman can also be used without installation. To do so, clone the repo, go into the invman/ directory. From there you can start INVMAN using:
 
     node main.js
 

@@ -1,12 +1,19 @@
-const SteamUser = require('steam-user')
-const GlobalOffensive = require('globaloffensive')
-const fs =require('fs')
-const cliProgress = require('cli-progress')
-const readline = require('readline');
-const {LoginSession,EAuthTokenPlatformType} = require('steam-session');
-const qrcode = require('qrcode-terminal');
-const axios = require('axios');
-const Chartscii = require('chartscii')
+import SteamUser from 'steam-user';
+import GlobalOffensive from 'globaloffensive';
+import fs from 'fs';
+import cliProgress from 'cli-progress';
+import readline from 'readline';
+import { LoginSession, EAuthTokenPlatformType } from 'steam-session';
+import qrcode from 'qrcode-terminal';
+import axios from 'axios';
+import Chartscii from 'chartscii';
+
+import {
+    floatParser,
+    parseVDF,
+    printWrappedList,
+    rarityParser
+} from './src/utils/index.js';
 
 //set working dir to script dir
 //process.chdir(__dirname)
@@ -73,13 +80,13 @@ csgo.on('disconnectedFromGC', (reason) => { //if disconnected from Game Coordina
 
 csgo.on('connectedToGC', (reason) => {  //when connection to Game Coordinator is established, execute main function
     console.log('Connected to CS:GO Game Coordinator:');
-    
+
     parseInv()
     loadCaskets(main)
 });
 
 async function getSources(){
-    
+
     const url = 'https://raw.githubusercontent.com/SteamDatabase/GameTracking-CS2/master/game/csgo/pak01_dir/scripts/items/items_game.txt';
     const itemDbUrl = 'https://raw.githubusercontent.com/ByMykel/CSGO-API/main/public/api/en/all.json';
 
@@ -119,58 +126,13 @@ async function getSources(){
                     }
                 });
             }
-            
+
             items_game=itemsObject
         }catch (err){
             console.error(`Couldn't download items_game.txt from ${url}`,err)
         }
-    
-}
 
-function parseVDF(text) {
-    const lines = text.split(/\r?\n/);
-    const stack = [];
-    let current = {};
-    let key = null;
-  
-    for (let rawLine of lines) {
-      let line = rawLine.trim();
-      if (!line || line.startsWith('//')) continue;
-  
-      if (line === '{') {
-        const obj = {};
-        if (key !== null) {
-          if (typeof current[key] === 'undefined') {
-            current[key] = obj;
-          } else if (Array.isArray(current[key])) {
-            current[key].push(obj);
-          } else {
-            current[key] = [current[key], obj];
-          }
-        }
-        stack.push([current, key]);
-        current = obj;
-        key = null;
-      } else if (line === '}') {
-        [current, key] = stack.pop();
-        key = null;
-      } else {
-        // Key-value pair
-        const match = line.match(/^"([^"]+)"\s+"([^"]*)"$/);
-        if (match) {
-          const [, k, v] = match;
-          current[k] = v;
-        } else {
-          // Key without value, expect a block
-          const keyMatch = line.match(/^"([^"]+)"$/);
-          if (keyMatch) {
-            key = keyMatch[1];
-          }
-        }
-      }
-    }
-    return current;
-  }
+}
 
 function saveRefreshToken(token,userName,userId) {
 
@@ -219,7 +181,7 @@ function handleLogin(){ //choose login method
                         inL.close()
                         credLogin(accountName,password)
                     })
-                }) 
+                })
             }else if(choice>Object.keys(savedTokens).length+2){
                 inL.close()
                 handleLogin()
@@ -229,7 +191,7 @@ function handleLogin(){ //choose login method
             }
         })
     }
-    
+
     inL.question("How do you want to sign into steam?\n1. QR-Code     2. Credentials\n>",choice =>{
         if(choice==1){
             inL.close()
@@ -244,7 +206,7 @@ function handleLogin(){ //choose login method
                     inL.close()
                     credLogin(accountName,password)
                 })
-            }) 
+            })
         }else{
             inL.close()
             handleLogin()
@@ -261,11 +223,11 @@ function credLogin(userName,pass){ //logs in using account credentials
 
 async function qrLogin(){ //log in using qr-code session
     try {
-        
+
         let session = new LoginSession(EAuthTokenPlatformType.SteamClient); // You can choose WebBrowser or MobileApp
 
         session.loginTimeout = 120000;
-        
+
         const startResult = await session.startWithQR();
         const qrCodeUrl = startResult.qrChallengeUrl;
 
@@ -279,7 +241,7 @@ async function qrLogin(){ //log in using qr-code session
 
         // Event listener for successful authentication
         session.on('authenticated', async () => {
-            
+
             // Now, use the refresh token to log in with node-steamuser
             user.logOn({
                 refreshToken: session.refreshToken
@@ -290,20 +252,14 @@ async function qrLogin(){ //log in using qr-code session
         // Event listener for timeout
         session.on('timeout', () => {
             console.error('Login attempt timed out. No approval received within the specified time.');
-            
         });
 
         // Event listener for errors
         session.on('error', (err) => {
             console.error(`ERROR during login session: ${err.message}`);
-            
         });
-
-
-
     } catch (error) {
         console.error('Failed to start QR code session:', error.message);
-        
     }
 }
 
@@ -318,27 +274,27 @@ function initReadline() {
             const words = line.trim().split(/\s+/);
             const lastWord = words[words.length - 1] || '';
             let command=words[0]
-            
+
 
             if (words.length === 1) {
                 const hits = Object.values(commands).filter(cmd => cmd.startsWith(lastWord));
                 return [hits.length ? hits : Object.values(commands), lastWord];
             }
-            
+
             if (command === commands.add && words.length === 2) {
                 const arg = lastWord;
                 const subCmds = Object.keys(casketSug);
                 const hits = subCmds.filter(s => s.startsWith(`${arg}`));
                 return [hits.length ? hits : subCmds, lastWord];
             }
-        
+
             if (command===commands.add && words.length===3){
                 const arg = lastWord;
                 const subCmds = inventorySug;
                 const hits = subCmds.filter(s => s.startsWith(`${arg}`));
                 return [hits.length ? hits : subCmds, lastWord];
             }
-        
+
             if (command === commands.remove && words.length === 2) {
                 const arg = lastWord;
                 const suggestionList = Object.keys(casketSug);
@@ -388,7 +344,7 @@ function initReadline() {
         // The result will be: [ 'add', 'My Storage Unit', 'AK-47 | Redline', '2' ]
 
         let input_array = input.split(" ")
-        
+
         // Convert underscores back to spaces for all arguments except the command itself
         for (let i = 1; i < input_array.length; i++) {
             if (typeof input_array[i] === 'string') {
@@ -456,7 +412,7 @@ function initReadline() {
             /*
             case commands.eval:
                 evalCommand()
-                break 
+                break
             */
             default:
                 helpMsg("unknown")
@@ -481,7 +437,7 @@ function genAutocomplete(){ //generate the autocomplete list
             casketSug[casketName].push(name)
             let commonName=name.slice(0,-8)
             if(!commonSug.includes(commonName)){
-                commonSug.push(commonName) 
+                commonSug.push(commonName)
             }
         }
         let items = Object.keys(casket.content.generic).map(s => s.replace(/ /g, "_"))
@@ -512,7 +468,7 @@ function genAutocomplete(){ //generate the autocomplete list
 }
 
 function parseInv(){    //parse the inventory into readable format
-    
+
     let inputActive;
     if(rl){
         rl.close()
@@ -535,8 +491,8 @@ function parseInv(){    //parse the inventory into readable format
 
     //const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect)
     //bar.start(inventory.length, 0)
-    
-    
+
+
 
     for(let i=0;i<inventory.length;i++){
         let item = identItem(inventory[i])
@@ -571,7 +527,7 @@ function parseInv(){    //parse the inventory into readable format
             parsedInv.casket.push(item) //if item is storageunit add to "casket" array
             bar.increment()
             //bar.update(i + 1)
-            
+
         }else{ //when item is unique, add them to the unique array
             parsedInv.unique.push(item) //add parsed item to parsedInv array
             bar.increment
@@ -586,7 +542,7 @@ function parseInv(){    //parse the inventory into readable format
 }
 
 function identItem(item){ //identify the item for a given item object, return type (0=regular skin, 1=crate, 2=sticker, 3=patches, 4=storageunit, 5=misc/non-econ)
-    
+
     let itemType, itemName, itemFloat,itemSt, itemCasket, commonName, stKills, paintSeed, itemRarity,itemStickers = null
 
     if(item.flags==0 || item.flags==4){ //flags=0, Item is a regular item
@@ -596,7 +552,7 @@ function identItem(item){ //identify the item for a given item object, return ty
             commonName = commonName.replace(/\s*\(.*?\)\s*/g, '').trim()    //remove condition from itemName
             itemName = commonName + ` (${Number.parseFloat(item.paint_wear).toFixed(3)})`
             itemType = 0    // assign itemType 0 for regular skin
-            itemFloat = item.paint_wear   
+            itemFloat = item.paint_wear
             itemSt = item.hasOwnProperty('kill_eater_value') // set itemSt to True if item has stattrak attribute
             stKills=item.kill_eater_value
             paintSeed=item.paint_seed
@@ -624,19 +580,19 @@ function identItem(item){ //identify the item for a given item object, return ty
             let sticker=itemDb.find(obj=>obj.id==sticker_id)
             itemName=sticker.name
             itemType = 2 //assign itemType 2 for sticker
-            
+
         }else if(item.def_index=="4609"){// item ist ein patch
             itemName = "Generic Patch"
             itemType = 3 //assign itemType 3 for patches
-            
+
         }else if(item.def_index=="1201"){ //item is a storageunit
             itemName = item.custom_name // set storage unit name to its id for now
             itemType=4 //assign itemType 4 for storageunits
-            
+
         }else{
             itemName = "Non econ item"
             itemType = 5 //assign itemType 5 for misc/non econ items
-            
+
         }
         if(item.hasOwnProperty("casket_id")){//if item is in a casket, set the itemCasket property to the casket_id
             itemCasket=item.casket_id
@@ -674,42 +630,6 @@ function identItem(item){ //identify the item for a given item object, return ty
     }
 }
 
-function floatParser(float,short=true){ //converts item float value to condition name
-    if(float<0.07){
-        return short?"FN":"Factory New"
-    }else if(float>0.07 && float<=0.15){
-        return short?"MW":"Minimal Wear"
-    }else if(float>0.15 && float<=0.37){
-        return short?"FT": "Field-Tested"
-    }else if(float>0.37 && float<=0.45){
-        return short?"WW":"Well-Worn"
-    }else if(float>0.45 && float<=1.00){
-        return short?"BS":"Battle-Scarred"
-    }
-}
-
-function rarityParser(rarity, color=false){
-
-    switch (rarity){
-        case 1:
-            return color? "\x1b[90m" : "Consumer Grade"
-        case 2: 
-            return color? "\x1b[0;38;2;3;172;252;49m" : "Industrial Grade"
-        case 3: 
-            return color? "\x1b[0;38;2;3;61;252;49m" : "Mil-Spec"
-        case 4: 
-            return color? "\x1b[0;38;2;132;3;252;49m" : "Restricted"
-        case 5:
-            return color? "\x1b[0;38;2;236;3;252;49m" : "Classified"
-        case 6:
-            return color? "\x1b[31m" : "Covert"
-        case 7:
-            return color? "\x1b[33m" : "Contraband"
-
-
-    }
-}
-
 function loadCaskets(callback) { //loads caskets and parses them into the casket subobjects
     casketsLoaded = 0; // reset the counter each time
 
@@ -719,10 +639,10 @@ function loadCaskets(callback) { //loads caskets and parses them into the casket
         format:' {bar} | {filename} | {value}/{total}'
     }, cliProgress.Presets.rect)
 
-    
+
 
     //const bar = new cliProgress.SingleBar({}, cliProgress.Presets.rect)
-    
+
     if (parsedInv.casket.length === 0) {
         if (callback) callback();
         return;
@@ -733,11 +653,11 @@ function loadCaskets(callback) { //loads caskets and parses them into the casket
         rl.close()
         inputActive=true
     }
-    
+
     const bar = multibar.create(parsedInv.casket.length,0)
     bar.update(0,{filename:"Loading Storageunits"})
     //bar.start(parsedInv.casket.length, 0)
-    
+
     for (let i = 0; i < parsedInv.casket.length; i++) {
         const casket = parsedInv.casket[i];
         // Always initialize content object, even if casket is empty
@@ -770,11 +690,11 @@ function loadCaskets(callback) { //loads caskets and parses them into the casket
                 }
             }
             casketsLoaded += 1;
-            
+
             bar.increment()
             //bar.update(i+1)
-            
-            
+
+
             if (casketsLoaded === parsedInv.casket.length) { //if all caskets are loaded, call the callback function
                 //bar.stop()
                 multibar.stop()
@@ -890,37 +810,6 @@ function moveFrom(itemIds, source) {//moves items from a casket to the inventory
     csgo.on('itemCustomizationNotification', onNotification);
 
     startNext();
-}
-
-function printWrappedList(label, items, contrast=false,maxLineLength = process.stdout.columns || 100,print=true) {
-    // ANSI escape codes for colors
-    const WHITE = '\x1b[37m';
-    const GREY = '\x1b[90m'; // Bright black (light grey)
-    const RESET = '\x1b[0m';
-    let line = "     ⮱ ";
-    let output = label + "\n" + line;
-    for (let i = 0; i < items.length; i++) {
-        let item;
-        if (contrast) {
-            let color = (i % 2 === 0) ? WHITE : GREY;
-            item = color + items[i] + RESET;
-        } else {
-            item = items[i];
-        }
-        let next = (i === 0 ? "" : ", ") + item;
-        // For length, ignore color codes if present
-        let lineLength = (line + next).replace(/\x1b\[[0-9;]*m/g, '').length;
-        if (lineLength > maxLineLength) {
-            output += "\n       " + item;
-            line = "       " + item;
-        } else {
-            output += (i === 0 ? "" : ", ") + item;
-            line += (i === 0 ? "" : ", ") + item;
-        }
-    }if(print){
-        console.log(output)
-    }return output
-    
 }
 
 async function getPrice(itemName){
@@ -1049,7 +938,7 @@ function moveItemToCasket(itemName, casketName, amount = 1){ //gets the array of
     }
 
     const genericItem = parsedInv.generic[itemName];
-    if(genericItem && genericItem.quantity>=amount){ //if item is generic, check if sufficient quantity is available 
+    if(genericItem && genericItem.quantity>=amount){ //if item is generic, check if sufficient quantity is available
         moveTo(genericItem.itemIds.slice(0,amount),casketId) //move the first x items from the itemIds array to the casket
         return;
     }
@@ -1113,14 +1002,14 @@ function lsCommand(scope="inv"){
             };
             return getX(b) - getX(a);
         });
-        
+
         let uniques=[]
         for(let i=0;i<casket.content.unique.length;i++){
             let item=casket.content.unique[i]
             let itemStr
             if(item.itemType==0){
                 itemStr=`${rarityParser(item.itemRarity,true)}${item.itemName}\x1b[0m`
-                
+
             }else{
                 itemStr=`${item.itemName}`
             }
@@ -1153,7 +1042,7 @@ function lsCommand(scope="inv"){
                 }
                 uniques.push(itemStr)
             }
-            
+
         }
         let generics=[]
         let total =uniques.length
@@ -1196,13 +1085,13 @@ function findCommand(itemName){
             }
         }
     }
-    
+
     for(let i=0;i<Object.keys(generic).length;i++){
         if(Object.keys(generic)[i]==itemName){
             found["Inventory"]={"itemName":itemName,"quantity":generic[Object.keys(generic)[i]].quantity}
         }
     }
-    
+
     for(let i=0;i<caskets.length;i++){
         let casket=caskets[i]
         for(let i=0;i<casket.content.unique.length;i++){
@@ -1231,14 +1120,14 @@ function findCommand(itemName){
                 }else{
                     outStr+=`${item.itemName}\n`
                 }
-                
+
             }
-            
+
         }else{ //item is generic
             outStr+=`${found[location].itemName} (${found[location].quantity}x)\n`
         }
         console.log(outStr)
-               
+
     }
 }
 
@@ -1286,10 +1175,10 @@ function inspectCommand(itemName){
         for(let i=0;i<item.itemStickers.length;i++){
             stickers.push(item.itemStickers[i].name)
         }
-        
+
         //infoString+=`         Stickers:${printWrappedList("",stickers,false,1,false)}`
         infoString+=`         Stickers: ${stickers.join(", ")}\n`
-        
+
     }
     console.log(infoString)
 
