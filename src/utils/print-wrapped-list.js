@@ -1,5 +1,7 @@
 /**
  *
+ * Formats and prints an array of items to the Terminal  
+ *
  * @param {*} label
  * @param {*} items
  * @param {*} contrast
