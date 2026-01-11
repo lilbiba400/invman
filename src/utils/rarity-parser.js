@@ -1,5 +1,7 @@
 /**
  *
+ * Returns name or color for given rarity value
+ *
  * @param {number} rarity
  * @param {boolean} color
  *
