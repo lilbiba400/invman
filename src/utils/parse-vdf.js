@@ -1,5 +1,7 @@
 /**
  *
+ * Parses Valva Data Files (.vdf) to JSON
+ +
  * @param {string} text
  *
  * @returns {object}
